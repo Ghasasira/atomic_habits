@@ -1,7 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Reminder / alarm scheduling (FR-2.1, NFR-1.1). -->
+    <!-- Reminder / alarm scheduling (FR-2.1, NFR-1.1).
+         SCHEDULE_EXACT_ALARM is requested at runtime and is Play-compliant for a
+         reminder app; when the user declines, scheduling falls back to inexact
+         alarms (see NotificationService). We intentionally do NOT declare
+         USE_EXACT_ALARM, which Google Play restricts to alarm-clock/calendar
+         apps. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />

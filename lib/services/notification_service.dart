@@ -170,6 +170,7 @@ class NotificationService {
     const title = 'Time for your habit';
     final body = name;
     final details = _details(name);
+    final mode = await _resolveScheduleMode();
 
     switch (frequency) {
       case FrequencyType.daily:
@@ -180,6 +181,7 @@ class NotificationService {
           _nextInstanceOfTime(hour, minute),
           details,
           habitId,
+          mode: mode,
           match: DateTimeComponents.time,
         );
         break;
@@ -195,6 +197,7 @@ class NotificationService {
             _nextInstanceOfWeekdayTime(weekday, hour, minute),
             details,
             habitId,
+            mode: mode,
             match: DateTimeComponents.dayOfWeekAndTime,
           );
         }
@@ -214,6 +217,7 @@ class NotificationService {
           next,
           details,
           habitId,
+          mode: mode,
         );
         break;
     }
@@ -226,6 +230,7 @@ class NotificationService {
     tz.TZDateTime when,
     NotificationDetails details,
     int habitId, {
+    required AndroidScheduleMode mode,
     DateTimeComponents? match,
   }) async {
     await _plugin.zonedSchedule(
@@ -234,10 +239,27 @@ class NotificationService {
       body: body,
       scheduledDate: when,
       notificationDetails: details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: mode,
       matchDateTimeComponents: match,
       payload: habitId.toString(),
     );
+  }
+
+  /// Uses exact scheduling when the OS permits it, otherwise degrades to
+  /// inexact alarms. This keeps us Play-compliant (we only declare
+  /// SCHEDULE_EXACT_ALARM, requested at runtime) and prevents scheduling from
+  /// throwing on Android 13+ when the user hasn't granted exact alarms.
+  Future<AndroidScheduleMode> _resolveScheduleMode() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) {
+      // iOS/other platforms ignore androidScheduleMode.
+      return AndroidScheduleMode.exactAllowWhileIdle;
+    }
+    final canExact = await android.canScheduleExactNotifications() ?? false;
+    return canExact
+        ? AndroidScheduleMode.exactAllowWhileIdle
+        : AndroidScheduleMode.inexactAllowWhileIdle;
   }
 
   /// Cancels every notification id that could belong to [habitId].

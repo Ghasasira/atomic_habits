@@ -56,9 +56,13 @@ permissions in `android/app/src/main/AndroidManifest.xml`.
 
 ## Reminders & alarms — reliability notes
 
-- Reminders are scheduled with `AndroidScheduleMode.exactAllowWhileIdle` and a
-  max-importance channel with a full-screen intent, and are re-armed on every
-  app launch and after device reboot (boot receiver).
+- Reminders use a max-importance channel with a full-screen intent and are
+  re-armed on every app launch and after device reboot (boot receiver).
+- The app declares only `SCHEDULE_EXACT_ALARM` (requested at runtime), which is
+  Google Play-compliant for a reminder app — not the restricted `USE_EXACT_ALARM`.
+  When exact alarms are permitted the reminder fires at the precise minute
+  (`exactAllowWhileIdle`); when the user declines, it degrades gracefully to an
+  inexact alarm instead of failing.
 - **Daily** and **specific-weekday** habits repeat automatically. **Every-N-days**
   habits are scheduled as a one-shot for the next due date and re-armed on the
   next app open (repeating interval alarms are a known limitation to revisit).
