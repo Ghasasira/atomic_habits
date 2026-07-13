@@ -1,4 +1,4 @@
-package com.example.atomic_habits
+package com.gasasira.atomichabits
 
 import io.flutter.embedding.android.FlutterActivity
 

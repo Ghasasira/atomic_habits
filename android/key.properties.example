@@ -1,0 +1,14 @@
+# Template for the release signing config.
+#
+# 1. Create the upload keystore (run from the repo root):
+#      keytool -genkey -v -keystore android/app/upload-keystore.jks \
+#        -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+# 2. Copy this file to android/key.properties and fill in the passwords you
+#    chose above. Both android/key.properties and the .jks file are gitignored —
+#    never commit them, and store the passwords in a password manager. Losing
+#    them means you can never publish an update to the app.
+storePassword=YOUR_STORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=upload
+storeFile=upload-keystore.jks
