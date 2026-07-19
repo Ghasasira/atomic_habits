@@ -24,8 +24,11 @@ Future<void> main() async {
 
   // If a notification action launched the app, apply it now.
   await notifications.processLaunchAction();
-  // Ask for permission, then (re)arm reminders for all active habits.
-  await notifications.requestPermissions();
+  // (Re)arm reminders for all active habits. Permission is NOT requested here:
+  // asking over the splash screen gets the dialog dismissed (and after two
+  // denials Android never shows it again). It is requested in context instead,
+  // when the user saves a habit with a reminder (see HabitFormScreen /
+  // ReminderPermissionProvider).
   await habitRepository.rescheduleAll();
 
   runApp(

@@ -58,6 +58,12 @@ permissions in `android/app/src/main/AndroidManifest.xml`.
 
 - Reminders use a max-importance channel with a full-screen intent and are
   re-armed on every app launch and after device reboot (boot receiver).
+- Notification permission is requested **in context** — when a habit with a
+  reminder is saved — not at cold start (a splash-screen dialog gets dismissed,
+  and Android silently auto-denies after two denials). If notifications are
+  blocked, the Today screen shows a banner whose **Enable** action retries the
+  dialog or deep-links to the app's notification settings; the state is
+  re-checked on every app resume and reminders are re-armed once allowed.
 - The app declares only `SCHEDULE_EXACT_ALARM` (requested at runtime), which is
   Google Play-compliant for a reminder app — not the restricted `USE_EXACT_ALARM`.
   When exact alarms are permitted the reminder fires at the precise minute

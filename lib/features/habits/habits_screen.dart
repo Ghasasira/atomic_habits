@@ -6,6 +6,7 @@ import '../../core/utils/date_x.dart';
 import '../../core/utils/format.dart';
 import '../../data/database/database.dart';
 import '../../providers/habit_provider.dart';
+import '../../providers/reminder_permission_provider.dart';
 import '../shared/empty_state.dart';
 import 'habit_form_screen.dart';
 
@@ -29,8 +30,13 @@ class HabitsScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           final habits = provider.habitsForSelectedDay;
+          // Only warn when a reminder actually depends on notifications.
+          final remindersBlocked =
+              context.watch<ReminderPermissionProvider>().remindersBlocked &&
+                  provider.habits.any((h) => h.reminderEnabled);
           return Column(
             children: [
+              if (remindersBlocked) const _RemindersBlockedBanner(),
               _WeekStrip(
                 selectedDay: provider.selectedDay,
                 onSelected: provider.selectDay,
@@ -116,6 +122,45 @@ class HabitsScreen extends StatelessWidget {
     if (confirmed ?? false) {
       await provider.deleteHabit(habit.id);
     }
+  }
+}
+
+/// Shown when the OS is blocking our notifications, so alarms fire silently.
+/// "Enable" retries the permission dialog and falls back to system settings.
+class _RemindersBlockedBanner extends StatelessWidget {
+  const _RemindersBlockedBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.notifications_off_outlined,
+              color: theme.colorScheme.onErrorContainer),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Notifications are blocked, so habit reminders cannot ring.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onErrorContainer,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () =>
+                context.read<ReminderPermissionProvider>().enableReminders(),
+            child: const Text('Enable'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

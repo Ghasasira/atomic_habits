@@ -10,6 +10,7 @@ import 'providers/calendar_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/goal_provider.dart';
 import 'providers/habit_provider.dart';
+import 'providers/reminder_permission_provider.dart';
 import 'services/notification_service.dart';
 
 /// Root widget. Wires the shared services + view-models into the widget tree
@@ -42,6 +43,9 @@ class AtomicHabitsApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => GoalProvider(goalRepository)),
         ChangeNotifierProvider(
             create: (_) => DashboardProvider(habitRepository)),
+        ChangeNotifierProvider(
+            create: (_) =>
+                ReminderPermissionProvider(notifications, habitRepository)),
       ],
       child: MaterialApp(
         title: 'Atomic Habits',

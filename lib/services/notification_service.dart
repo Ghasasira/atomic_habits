@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -35,7 +36,12 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
+  /// Backed by MainActivity; opens the app's system notification settings.
+  static const MethodChannel _settingsChannel =
+      MethodChannel('atomichabits/settings');
+
   bool _initialised = false;
+  bool _exactAlarmPromptShown = false;
 
   /// Set by the app so tapped actions can be written to the database.
   HabitActionHandler? onHabitAction;
@@ -93,15 +99,33 @@ class NotificationService {
     );
   }
 
-  /// Requests notification + exact-alarm permissions. Returns true if
-  /// notifications are permitted.
+  /// Whether the OS will actually display our notifications right now.
+  Future<bool> areNotificationsEnabled() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      return await android.areNotificationsEnabled() ?? false;
+    }
+    final ios = _plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) {
+      return (await ios.checkPermissions())?.isEnabled ?? false;
+    }
+    return true;
+  }
+
+  /// Requests notification permission (shows the system dialog when the OS
+  /// still allows one) and, only once notifications are granted, exact-alarm
+  /// access. Returns true if notifications are permitted.
+  ///
+  /// Note: after two denials Android auto-denies without a dialog; callers
+  /// should fall back to [openNotificationSettings] when this returns false.
   Future<bool> requestPermissions() async {
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     if (android != null) {
       final granted = await android.requestNotificationsPermission() ?? false;
-      // Needed for precise firing while the device is idle (NFR-1.1).
-      await android.requestExactAlarmsPermission();
+      if (granted) await _ensureExactAlarms(android);
       return granted;
     }
     final ios = _plugin.resolvePlatformSpecificImplementation<
@@ -115,6 +139,30 @@ class NotificationService {
           false;
     }
     return true;
+  }
+
+  /// Needed for precise firing while the device is idle (NFR-1.1). On Android
+  /// 14+ this navigates to the "Alarms & reminders" settings screen, so it is
+  /// asked at most once per app session and only after notifications are
+  /// allowed; declining just leaves reminders on inexact alarms.
+  Future<void> _ensureExactAlarms(
+      AndroidFlutterLocalNotificationsPlugin android) async {
+    if (_exactAlarmPromptShown) return;
+    final canExact = await android.canScheduleExactNotifications() ?? false;
+    if (canExact) return;
+    _exactAlarmPromptShown = true;
+    await android.requestExactAlarmsPermission();
+  }
+
+  /// Opens the app's notification settings so the user can re-enable
+  /// notifications once Android refuses to show the permission dialog.
+  Future<void> openNotificationSettings() async {
+    try {
+      await _settingsChannel.invokeMethod<void>('openNotificationSettings');
+    } catch (e) {
+      // Non-Android platforms have no handler; nothing sensible to do.
+      debugPrint('Could not open notification settings: $e');
+    }
   }
 
   NotificationDetails _details(String habitName) {

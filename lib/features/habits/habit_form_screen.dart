@@ -8,6 +8,7 @@ import '../../core/utils/date_x.dart';
 import '../../core/utils/format.dart';
 import '../../data/database/database.dart';
 import '../../providers/habit_provider.dart';
+import '../../providers/reminder_permission_provider.dart';
 
 /// Create or edit a habit (FR-1.1, FR-1.2, FR-1.3).
 class HabitFormScreen extends StatefulWidget {
@@ -81,10 +82,18 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
     }
 
     final provider = context.read<HabitProvider>();
+    final permissions = context.read<ReminderPermissionProvider>();
+    final messenger = ScaffoldMessenger.of(context);
     final name = _nameController.text.trim();
     final category = _categoryController.text.trim().isEmpty
         ? 'General'
         : _categoryController.text.trim();
+
+    // Ask in context, before scheduling, so the alarm can be armed exactly.
+    var remindersBlocked = false;
+    if (_reminderEnabled) {
+      remindersBlocked = !await permissions.ensurePermissions();
+    }
 
     if (_isEditing) {
       await provider.updateHabit(
@@ -116,6 +125,13 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
       );
     }
     if (mounted) Navigator.of(context).pop();
+    if (remindersBlocked) {
+      // Root messenger, so this outlives the pop above.
+      messenger.showSnackBar(const SnackBar(
+        content: Text('Habit saved, but notifications are blocked so its '
+            'reminder cannot ring. Use the banner on Today to enable them.'),
+      ));
+    }
   }
 
   void _showError(String message) {
